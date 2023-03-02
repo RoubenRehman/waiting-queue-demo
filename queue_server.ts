@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as crypt from 'crypto';
 import { Server, Socket } from 'socket.io';
 
-import { ClientObject, PostBody, ResponseBody } from './interfaces/interfaces';
+import { ClientObject, PostBody } from './interfaces/interfaces';
 
 const app = express();
 const port = 1234;
@@ -79,6 +79,10 @@ app.get('/waitingroom', (req: Request, res: Response) => {
   res.sendFile(path.join(site_path, '/waitingroom.html'));
 });
 
+app.get('/adminpanel', (req: Request, res: Response) => {
+  res.sendFile(path.join(site_path, '/adminpanel.html'));
+});
+
 // POST endpoints
 app.post('/api/start-onsale', (req: Request, res: Response) => {
   let_next_users_in(max_simul_connections);
@@ -115,5 +119,5 @@ app.post('/api/let-next-in', (req: Request, res: Response) => {
 
 
 server.listen(port, () => {
-  console.log(`The server is listening on port ${port}`);
+  console.log(`This is the queue server. It's lining up the clients wanting to connect to the application server in a queue and lets them trickle back to the protected website one by one.\nThe server is listening on port ${port}, you can connect directly, but you will be redirected to the queue when trying to access the protected endpoint`);
 });

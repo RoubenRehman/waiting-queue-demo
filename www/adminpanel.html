@@ -4,32 +4,35 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script type="text/javascript" src="scripts/connectedClient.js" defer></script>
+    <script type="text/javascript" src="scripts/adminPanel.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous" defer></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
         body {
-            background: url('https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80') no-repeat center center fixed;
+            background: url('https://images.unsplash.com/photo-1492892132812-a00a8b245c45?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80') no-repeat center center fixed;
             -webkit-background-size: cover;
             -moz-background-size: cover;
             background-size: cover;
             -o-background-size: cover;
         }
     </style>
-    <title id="tab-title">Ticket Platform</title>
+    <title id="tab-title">Admin panel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 </head>
 <body>
     <div class="container">
         <div class="card border-0 shadow my-5">
             <div class="card-body p-5">
-                <h1 class="fw-light">Congrats!</h1>
+                <h1 class="fw-light">Admin Panel</h1>
                 <p></p>
                 <p class="lead">
-                    You passed the queue.
+                    This is the queue's admin panel. You can start the ticket onsale here:
+                </p>
+                <button type="button" class="btn btn-success" onclick="start_onsale()">Start onsale</button>
+                <p class="lead" id="result">
                 </p>
                 <p style="font-size: 8px; padding-top: 6em;">
-                    Image by Yvette de Wit on <a href="https://unsplash.com/photos/NYrVisodQ2M">Unsplash</a>.
+                    Image by Tim Mossholder on <a href="https://unsplash.com/photos/07uiqD9LS6U">Unsplash</a>.
                 </p>
             </div>
         </div>

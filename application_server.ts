@@ -1,14 +1,11 @@
 // Authors: Rouben Rehman
 
-import express, { Express, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import axios from 'axios';
 
 import * as http from 'http';
 import * as path from 'path';
-import * as crypt from 'crypto';
 import { Server, Socket } from 'socket.io';
-
-import { ClientObject, PostBody, ResponseBody } from './interfaces/interfaces';
 
 const app = express();
 const port = 80;
@@ -28,7 +25,7 @@ const io = new Server(server);
 io.on('connection', (socket: Socket) => {
     socket.on('register', (token: string) => {
         console.log(`new connection with token: ${token}`);
-        
+
         socket.on('disconnect', async () => {
             const my_uuid = token;
 
@@ -83,5 +80,5 @@ app.get('/', async (req: Request, res: Response) => {
 
 
 server.listen(port, () => {
-    console.log(`The server is listening on port ${port}`);
+    console.log(`This is the application server. It simulates the server that is to be protected by the external queue infrastructure.\nIt's listening on port ${port}. To connect, open http://localhost:${port}/ in a browser.`);
 });
