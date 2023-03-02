@@ -5,9 +5,9 @@ import express, { Express, Request, Response } from 'express';
 import * as http from 'http';
 import * as path from 'path';
 import * as crypt from 'crypto';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 
-import { WaitingClient, PostBody, ResponseBody } from './interfaces/interfaces';
+import { ClientObject, PostBody, ResponseBody } from './interfaces/interfaces';
 
 const app = express();
 const port = 1234;
@@ -20,9 +20,23 @@ const io = new Server(server);
 
 const site_path = path.join(__dirname, '../www');
 
-let waiting_clients: Array<WaitingClient> = [];
+let waiting_clients: Array<ClientObject> = [];
 let currently_valid_uuids: Array<string> = [];
 let max_simul_connections: number = 1;
+
+function let_next_users_in(amount: number) {
+  // This would be nicer if refactored to handle amount in parallel
+  for(let i = 0; i < amount; i++) {
+    const next_client = waiting_clients.shift();
+
+    if(!next_client) {
+      break;
+    }
+
+    currently_valid_uuids.push(next_client.uuid);
+    next_client.socket.emit('redirect', { url: `/redirect?token=${next_client.uuid}` });
+  }
+}
 
 
 /***************************
@@ -30,9 +44,9 @@ let max_simul_connections: number = 1;
  ***************************/
 
 // Socket handlers
-io.on('connection', (socket) => {
+io.on('connection', (socket: Socket) => {
 
-  const new_client: WaitingClient = {
+  const new_client: ClientObject = {
     uuid: crypt.randomUUID(),
     socket: socket
   }
@@ -67,19 +81,7 @@ app.get('/waitingroom', (req: Request, res: Response) => {
 
 // POST endpoints
 app.post('/api/start-onsale', (req: Request, res: Response) => {
-  
-  // This would be nicer if refactored to handle max_simul_connections in parallel
-  for(let i = 0; i < max_simul_connections; i++) {
-    const next_client = waiting_clients.shift();
-    
-    if(!next_client) {
-      break;
-    }
-
-    currently_valid_uuids.push(next_client.uuid);
-    next_client.socket.emit('redirect', { url: `/redirect?token=${next_client.uuid}` });
-  }
-
+  let_next_users_in(max_simul_connections);
   res.sendStatus(200);
 });
 
@@ -94,8 +96,20 @@ app.post('/api/validate-token', async (req: Request<{}, {}, PostBody>, res: Resp
   res.status(200).send({ valid: false });
 });
 
-app.post('api/let-next-in', (req: Request, res: Response) => {
+app.post('/api/let-next-in', (req: Request, res: Response) => {
+  const body = req.body ? req.body : {};
 
+  if(!body.token) {
+    res.sendStatus(400);
+    return;
+  }
+  console.log(currently_valid_uuids);
+  currently_valid_uuids = currently_valid_uuids.filter(x => { return x != body.token});
+  console.log(currently_valid_uuids);
+
+  let_next_users_in(1);
+
+  res.sendStatus(200);
 });
 
 

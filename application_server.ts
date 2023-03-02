@@ -6,9 +6,9 @@ import axios from 'axios';
 import * as http from 'http';
 import * as path from 'path';
 import * as crypt from 'crypto';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 
-import { WaitingClient, PostBody, ResponseBody } from './interfaces/interfaces';
+import { ClientObject, PostBody, ResponseBody } from './interfaces/interfaces';
 
 const app = express();
 const port = 80;
@@ -20,6 +20,36 @@ const site_path = path.join(__dirname, '../www');
 const server = http.createServer(app);
 const io = new Server(server);
 
+/***************************
+ *          API            *
+ ***************************/
+
+// Socket handlers
+io.on('connection', (socket: Socket) => {
+    socket.on('register', (token: string) => {
+        console.log(`new connection with token: ${token}`);
+        
+        socket.on('disconnect', async () => {
+            const my_uuid = token;
+
+            try {
+                const queue_res = await axios({
+                    method: 'post',
+                    url: 'http://localhost:1234/api/let-next-in',
+                    data: {
+                        token: my_uuid
+                    }
+                });
+
+            } catch(e) {
+                console.log(`An error occured while validating the token: ${e}`);
+            }
+
+        });
+    });
+});
+
+// GET endpoints
 app.get('/', async (req: Request, res: Response) => {
     if(!req.query.token) {
         res.redirect('http://localhost:1234');
@@ -50,6 +80,7 @@ app.get('/', async (req: Request, res: Response) => {
 
     res.sendFile(path.join(site_path, 'index.html'));
 });
+
 
 server.listen(port, () => {
     console.log(`The server is listening on port ${port}`);

@@ -1,5 +1,7 @@
-export interface WaitingClient {
-    socket: any;
+import { Socket } from "socket.io";
+
+export interface ClientObject {
+    socket: Socket;
     uuid: string;
 };
 
