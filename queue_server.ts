@@ -53,6 +53,14 @@ app.get('/', (req: Request, res: Response) => {
   res.redirect('/waitingroom');
 });
 
+app.get('/redirect', (req: Request, res:Response) => {
+  if(!req.query.token) {
+    res.redirect('/waitingroom');
+  }
+
+  res.redirect(`http://localhost:80/?token=${req.query.token}`);
+});
+
 app.get('/waitingroom', (req: Request, res: Response) => {
   res.sendFile(path.join(site_path, '/waitingroom.html'));
 });
@@ -69,7 +77,7 @@ app.post('/api/start-onsale', (req: Request, res: Response) => {
     }
 
     currently_valid_uuids.push(next_client.uuid);
-    next_client.socket.emit('redirect', { url: `http:localhost/?token=${next_client.uuid}` });
+    next_client.socket.emit('redirect', { url: `/redirect?token=${next_client.uuid}` });
   }
 
   res.sendStatus(200);

@@ -23,6 +23,7 @@ const io = new Server(server);
 app.get('/', async (req: Request, res: Response) => {
     if(!req.query.token) {
         res.redirect('http://localhost:1234');
+        return;
     }
 
     let token_is_valid = false;
@@ -44,6 +45,7 @@ app.get('/', async (req: Request, res: Response) => {
 
     if(!token_is_valid) {
         res.redirect('http://localhost:1234');
+        return;
     }
 
     res.sendFile(path.join(site_path, 'index.html'));
