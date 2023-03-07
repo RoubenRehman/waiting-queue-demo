@@ -1,6 +1,6 @@
 // Authors: Rouben Rehman
 
-import express, { Express, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 
 import * as http from 'http';
 import * as path from 'path';
@@ -24,20 +24,19 @@ let waiting_clients: Array<ClientObject> = [];
 let currently_valid_uuids: Array<string> = [];
 let max_simul_connections: number = 1;
 
+// This function takes in an amount and advances the queue by that many clients
 function let_next_users_in(amount: number) {
-  // This would be nicer if refactored to handle amount in parallel
-  for(let i = 0; i < amount; i++) {
-    const next_client = waiting_clients.shift();
+  if(amount <= 0) {
+    console.log("Error in advancing the queue: specified amout was zero or negative.");
+  }
 
-    if(!next_client) {
-      break;
-    }
+  const next_clients = waiting_clients.splice(0, amount);
 
+  next_clients.forEach((next_client) => {
     currently_valid_uuids.push(next_client.uuid);
     next_client.socket.emit('redirect', { url: `/redirect?token=${next_client.uuid}` });
-  }
+  });
 }
-
 
 /***************************
  *          API            *
@@ -59,7 +58,7 @@ io.on('connection', (socket: Socket) => {
   waiting_clients.push(new_client);
   new_client.socket.emit("new-token", { token: new_client.uuid });
   
-  console.log(`New socket connected: ${waiting_clients}`);
+  console.log(`New socket connected: ${new_client.uuid}\nCurrently waiting: ${waiting_clients.length}`);
 });
 
 // GET endpoints
@@ -67,6 +66,8 @@ app.get('/', (req: Request, res: Response) => {
   res.redirect('/waitingroom');
 });
 
+// Endpoint a waiting client gets rerouted to after finishing the queue. Here, a 301 redirect is issued
+// taking the client back to the proteced website.
 app.get('/redirect', (req: Request, res:Response) => {
   if(!req.query.token) {
     res.redirect('/waitingroom');
@@ -75,22 +76,34 @@ app.get('/redirect', (req: Request, res:Response) => {
   res.redirect(`http://localhost:80/?token=${req.query.token}`);
 });
 
+// Main waiting room endpoint.
 app.get('/waitingroom', (req: Request, res: Response) => {
   res.sendFile(path.join(site_path, '/waitingroom.html'));
 });
 
+// Endpoint serving the adminpanel.html site
 app.get('/adminpanel', (req: Request, res: Response) => {
   res.sendFile(path.join(site_path, '/adminpanel.html'));
 });
 
+
 // POST endpoints
+
+// Endpoint starting the onsale by letting in the first max_simul_connections waiting clients
 app.post('/api/start-onsale', (req: Request, res: Response) => {
   let_next_users_in(max_simul_connections);
   res.sendStatus(200);
 });
 
+// Called by the protected web server to check if a given token is valid or if the client is to be sent
+// back to the waiting room.
 app.post('/api/validate-token', async (req: Request<{}, {}, PostBody>, res: Response) => {
   const body = req.body ? req.body : { };
+
+  if(!body) {
+    res.status(400).send({ error: 'No token provided' });
+    return;
+  }
 
   if(body.token && currently_valid_uuids.includes(body.token)) {
     res.status(200).send({ valid: true });
@@ -100,16 +113,22 @@ app.post('/api/validate-token', async (req: Request<{}, {}, PostBody>, res: Resp
   res.status(200).send({ valid: false });
 });
 
+// Called by the protected web server each time a client leaves the protected website.
+// Each time, the next waiting client is to be let through.
 app.post('/api/let-next-in', (req: Request, res: Response) => {
   const body = req.body ? req.body : {};
 
   if(!body.token) {
-    res.sendStatus(400);
+    res.status(400).send({ error: 'No token provided' });
     return;
   }
-  console.log(currently_valid_uuids);
+
+  if(!currently_valid_uuids.includes(body.token)) {
+    res.status(500).send({ error: 'Provided token is unknown' });
+    return;
+  }
+
   currently_valid_uuids = currently_valid_uuids.filter(x => { return x != body.token});
-  console.log(currently_valid_uuids);
 
   let_next_users_in(1);
 
