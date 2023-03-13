@@ -1,5 +1,9 @@
 import { Socket } from "socket.io";
 
+export interface Config {
+    max_simul_connections: number;
+};
+
 export interface ClientObject {
     socket: Socket;
     uuid: string;

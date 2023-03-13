@@ -5,9 +5,10 @@ import express, { Request, Response } from 'express';
 import * as http from 'http';
 import * as path from 'path';
 import * as crypt from 'crypto';
+import * as fs from 'fs';
 import { Server, Socket } from 'socket.io';
 
-import { ClientObject, PostBody } from './interfaces/interfaces';
+import { Config, ClientObject, PostBody } from './interfaces/interfaces';
 
 const app = express();
 const port = 1234;
@@ -19,10 +20,21 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const site_path = path.join(__dirname, '../www');
+const config_path = path.join(__dirname, '../config/queue_config.json');
 
 let waiting_clients: Array<ClientObject> = [];
 let currently_valid_uuids: Array<string> = [];
-let max_simul_connections: number = 1;
+let max_simul_connections = 1;
+
+try {
+  const raw_config = fs.readFileSync(config_path);
+  const config: Config = JSON.parse(raw_config.toString());
+  max_simul_connections = config.max_simul_connections;
+  console.log(` Max number of simultaneous connections: ${max_simul_connections}`);
+} catch(err) {
+  console.error(`Error reading config file: ${err}`);
+  console.error("Max_simul_config is set to 1 (default)");
+}
 
 // This function takes in an amount and advances the queue by that many clients
 function let_next_users_in(amount: number) {
