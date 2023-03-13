@@ -1,0 +1,24 @@
+{
+  "name": "queue-poc",
+  "version": "0.0.1",
+  "description": "A server-side waiting queue poc for the course Software Architecture at TU Delft",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab.ewi.tudelft.nl:in4315/2022-2023/sa-team60.git"
+  },
+  "author": "Emilia Rieschel, Florian Ecker-Eckhofen, Gustav Emil Norbert, Rouben Rehman",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.3.4",
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "typescript": "^4.9.5"
+  }
+}
