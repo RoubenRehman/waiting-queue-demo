@@ -1,29 +1,33 @@
 // Authors: Rouben Rehman
 
 import express, { Request, Response } from 'express';
-
+import * as redis from 'redis';
 import * as http from 'http';
 import * as path from 'path';
 import * as crypt from 'crypto';
 import * as fs from 'fs';
-import { Server, Socket } from 'socket.io';
 
-import { Config, ClientObject, PostBody } from './interfaces/interfaces';
+const cookieparser = require('cookie-parser');
+
+import { Config, PostBody } from './interfaces/interfaces';
+
+const redisClient = redis.createClient();
+(async () => {
+  await redisClient.connect();
+})();
 
 const app = express();
 const port = 1234;
 
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json());
+app.use(cookieparser());
 
 const server = http.createServer(app);
-const io = new Server(server);
 
 const site_path = path.join(__dirname, '../www');
 const config_path = path.join(__dirname, '../config/queue_config.json');
 
-let waiting_clients: Array<ClientObject> = [];
-let currently_valid_uuids: Array<string> = [];
 let max_simul_connections = 1;
 
 try {
@@ -37,60 +41,54 @@ try {
 }
 
 // This function takes in an amount and advances the queue by that many clients
-function let_next_users_in(amount: number) {
-  if(amount <= 0) {
-    console.log("Error in advancing the queue: specified amout was zero or negative.");
+async function let_next_users_in() {
+  const next = await redisClient.rPop('queue');
+    
+  if(!next){
+    return;
   }
 
-  const next_clients = waiting_clients.splice(0, amount);
-
-  next_clients.forEach((next_client) => {
-    currently_valid_uuids.push(next_client.uuid);
-    next_client.socket.emit('redirect', { url: `/redirect?token=${next_client.uuid}` });
-  });
+  await redisClient.set(next, 'valid')
 }
 
 /***************************
  *          API            *
  ***************************/
 
-// Socket handlers
-io.on('connection', (socket: Socket) => {
-
-  const new_client: ClientObject = {
-    uuid: crypt.randomUUID(),
-    socket: socket
-  }
-
-  new_client.socket.on('disconnect', () => {
-    const my_uuid = new_client.uuid;
-    waiting_clients = waiting_clients.filter( x => { return x.uuid != my_uuid });
-  })
-
-  waiting_clients.push(new_client);
-  new_client.socket.emit("new-token", { token: new_client.uuid });
-  
-  console.log(`New socket connected: ${new_client.uuid}\nCurrently waiting: ${waiting_clients.length}`);
-});
-
 // GET endpoints
 app.get('/', (req: Request, res: Response) => {
   res.redirect('/waitingroom');
 });
 
-// Endpoint a waiting client gets rerouted to after finishing the queue. Here, a 301 redirect is issued
-// taking the client back to the proteced website.
-app.get('/redirect', (req: Request, res:Response) => {
-  if(!req.query.token) {
-    res.redirect('/waitingroom');
+// Main waiting room endpoint.
+app.get('/waitingroom', async (req: Request, res: Response) => {
+  const token = req.query.token;
+
+  if(!token || typeof token != 'string') {
+    try {
+      const token = crypt.randomUUID();
+
+      redisClient.lPush('queue', token);
+      redisClient.set(token, 'waiting');
+      res.redirect(`/waitingroom?token=${token}`);
+
+    } catch(err) {
+      console.error(err);
+      res.status(500).send('Something went wrong');
+    }
+
+    res.sendFile(path.join(site_path, '/waitingroom.html'));
+    return;
   }
 
-  res.redirect(`http://localhost:80/?token=${req.query.token}`);
-});
+  const status = await redisClient.get(token);
+  
+  if(status === 'waiting') {
+    res.sendFile(path.join(site_path, '/waitingroom.html'));
+    return;
+  }
 
-// Main waiting room endpoint.
-app.get('/waitingroom', (req: Request, res: Response) => {
-  res.sendFile(path.join(site_path, '/waitingroom.html'));
+  res.redirect(`http://localhost:80/?token=${token}`);
 });
 
 // Endpoint serving the adminpanel.html site
@@ -103,7 +101,7 @@ app.get('/adminpanel', (req: Request, res: Response) => {
 
 // Endpoint starting the onsale by letting in the first max_simul_connections waiting clients
 app.post('/api/start-onsale', (req: Request, res: Response) => {
-  let_next_users_in(max_simul_connections);
+  let_next_users_in();
   res.sendStatus(200);
 });
 
@@ -112,22 +110,20 @@ app.post('/api/start-onsale', (req: Request, res: Response) => {
 app.post('/api/validate-token', async (req: Request<{}, {}, PostBody>, res: Response) => {
   const body = req.body ? req.body : { };
 
-  if(!body) {
+  if(!body || !body.token) {
     res.status(400).send({ error: 'No token provided' });
     return;
   }
 
-  if(body.token && currently_valid_uuids.includes(body.token)) {
-    res.status(200).send({ valid: true });
-    return;
-  }
-  
-  res.status(200).send({ valid: false });
+  const status = await redisClient.get(body.token);
+
+  status === 'valid' ? res.status(200).send({ valid: true }) : res.status(200).send({ valid: false });;
 });
+
 
 // Called by the protected web server each time a client leaves the protected website.
 // Each time, the next waiting client is to be let through.
-app.post('/api/let-next-in', (req: Request, res: Response) => {
+app.post('/api/let-next-in', async (req: Request, res: Response) => {
   const body = req.body ? req.body : {};
 
   if(!body.token) {
@@ -135,14 +131,8 @@ app.post('/api/let-next-in', (req: Request, res: Response) => {
     return;
   }
 
-  if(!currently_valid_uuids.includes(body.token)) {
-    res.status(500).send({ error: 'Provided token is unknown' });
-    return;
-  }
-
-  currently_valid_uuids = currently_valid_uuids.filter(x => { return x != body.token});
-
-  let_next_users_in(1);
+  await redisClient.del(body.token);
+  let_next_users_in();
 
   res.sendStatus(200);
 });
