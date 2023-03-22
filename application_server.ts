@@ -80,5 +80,10 @@ app.get('/', async (req: Request, res: Response) => {
 
 
 server.listen(port, () => {
-    console.log(`This is the application server. It simulates the server that is to be protected by the external queue infrastructure.\nIt's listening on port ${port}. To connect, open http://localhost:${port}/ in a browser.`);
+    const line = "==========================================================";
+    const message = `This is the application server. It simulates the server that is to be protected by the external queue infrastructure.\n` +
+        `The server is listening on port ${port}.\n` +
+        `To connect, open http://localhost:${port}/ in a web browser.`;
+
+    console.log(`${line}\n${message}\n${line}\n`);
 });

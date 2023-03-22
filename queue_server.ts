@@ -7,21 +7,19 @@ import * as path from 'path';
 import * as crypt from 'crypto';
 import * as fs from 'fs';
 
-const cookieparser = require('cookie-parser');
-
 import { Config, PostBody } from './interfaces/interfaces';
 
+// Create redis client and connect to server
 const redisClient = redis.createClient();
 (async () => {
   await redisClient.connect();
 })();
 
 const app = express();
-const port = 1234;
+let port = 1234; // Default queue port
 
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json());
-app.use(cookieparser());
 
 const server = http.createServer(app);
 
@@ -30,25 +28,30 @@ const config_path = path.join(__dirname, '../config/queue_config.json');
 
 let max_simul_connections = 1;
 
+// Read config
 try {
   const raw_config = fs.readFileSync(config_path);
   const config: Config = JSON.parse(raw_config.toString());
+
   max_simul_connections = config.max_simul_connections;
-  console.log(` Max number of simultaneous connections: ${max_simul_connections}`);
+  port = config.port;
 } catch(err) {
+
   console.error(`Error reading config file: ${err}`);
-  console.error("Max_simul_config is set to 1 (default)");
+  console.error("Max_simul_config is set to 1 (default)\n");
 }
 
 // This function takes in an amount and advances the queue by that many clients
-async function let_next_users_in() {
-  const next = await redisClient.rPop('queue');
+async function let_next_users_in(num: number): Promise<void> {
+  for (let i = 0; i < num; i++) {
+    const next = await redisClient.rPop('queue');
     
-  if(!next){
-    return;
-  }
+    if (!next) {
+      return;
+    }
 
-  await redisClient.set(next, 'valid')
+    await redisClient.set(next, 'valid');
+  }
 }
 
 /***************************
@@ -64,6 +67,7 @@ app.get('/', (req: Request, res: Response) => {
 app.get('/waitingroom', async (req: Request, res: Response) => {
   const token = req.query.token;
 
+  // If user doesn't have a token yet, create one and queue user up
   if(!token || typeof token != 'string') {
     try {
       const token = crypt.randomUUID();
@@ -77,18 +81,23 @@ app.get('/waitingroom', async (req: Request, res: Response) => {
       res.status(500).send('Something went wrong');
     }
 
-    res.sendFile(path.join(site_path, '/waitingroom.html'));
     return;
   }
 
+  // If user has a token, check for validicy. If valid, sent to app, else to waiting room.
   const status = await redisClient.get(token);
   
   if(status === 'waiting') {
     res.sendFile(path.join(site_path, '/waitingroom.html'));
     return;
+
+  } else if(status === 'valid') {
+    res.redirect(`http://localhost:80/?token=${token}`);
+    return;
   }
 
-  res.redirect(`http://localhost:80/?token=${token}`);
+  // If user has a token but its neither waiting nor valid, discard the token
+  res.redirect('/waitingroom');
 });
 
 // Endpoint serving the adminpanel.html site
@@ -101,7 +110,7 @@ app.get('/adminpanel', (req: Request, res: Response) => {
 
 // Endpoint starting the onsale by letting in the first max_simul_connections waiting clients
 app.post('/api/start-onsale', (req: Request, res: Response) => {
-  let_next_users_in();
+  let_next_users_in(max_simul_connections);
   res.sendStatus(200);
 });
 
@@ -131,8 +140,9 @@ app.post('/api/let-next-in', async (req: Request, res: Response) => {
     return;
   }
 
+  // Remove disconnected users token from redis
   await redisClient.del(body.token);
-  let_next_users_in();
+  let_next_users_in(1);
 
   res.sendStatus(200);
 });
@@ -140,5 +150,12 @@ app.post('/api/let-next-in', async (req: Request, res: Response) => {
 
 
 server.listen(port, () => {
-  console.log(`This is the queue server. It's lining up the clients wanting to connect to the application server in a queue and lets them trickle back to the protected website one by one.\nThe server is listening on port ${port}, you can connect directly, but you will be redirected to the queue when trying to access the protected endpoint`);
-});
+  const line = "==========================================================";
+  const message = "This is the queue server. It manages the queue of clients waiting to connect to the application server.\n" +
+    `\nThe server is listening on port ${port}.\n` +
+    "\nWhen you try to access the protected endpoint, you will be redirected to the queue.\n" +
+    "Clients are let through one by one, in the order in which they joined the queue." + 
+    `\n\nMax. simultaneous connections: ${max_simul_connections}`;
+  
+  console.log(`${line}\n${message}\n${line}\n`);
+  });

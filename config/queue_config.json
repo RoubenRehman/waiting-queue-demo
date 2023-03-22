@@ -1,3 +1,4 @@
 {
-    "max_simul_connections": 3
+    "max_simul_connections": 3,
+    "port": 1234
 }
