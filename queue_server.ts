@@ -18,6 +18,9 @@ const redisClient = redis.createClient();
 const app = express();
 let port = 1234; // Default queue port
 
+let DEBUG = false;
+let DEBUG_TOKEN = 'always-valid';
+
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json());
 
@@ -35,6 +38,8 @@ try {
 
   max_simul_connections = config.max_simul_connections;
   port = config.port;
+  DEBUG = config.debug;
+  DEBUG_TOKEN = config.debug_token;
 } catch(err) {
 
   console.error(`Error reading config file: ${err}`);
@@ -141,7 +146,9 @@ app.post('/api/let-next-in', async (req: Request, res: Response) => {
   }
 
   // Remove disconnected users token from redis
-  await redisClient.del(body.token);
+  if(!DEBUG || body.token != DEBUG_TOKEN) {
+    await redisClient.del(body.token);
+  }
   let_next_users_in(1);
 
   res.sendStatus(200);
