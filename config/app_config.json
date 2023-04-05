@@ -1,0 +1,3 @@
+{
+    "queue_servers": ["http://localhost:1234", "http://localhost:4040"]
+}

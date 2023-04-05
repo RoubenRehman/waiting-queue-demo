@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as crypt from 'crypto';
 import * as fs from 'fs';
 
-import { Config, PostBody } from './interfaces/interfaces';
+import { QueueConfig, PostBody } from './interfaces/interfaces';
 
 // Create redis client and connect to server
 const redisClient = redis.createClient();
@@ -34,7 +34,7 @@ let max_simul_connections = 1;
 // Read config
 try {
   const raw_config = fs.readFileSync(config_path);
-  const config: Config = JSON.parse(raw_config.toString());
+  const config: QueueConfig = JSON.parse(raw_config.toString());
 
   max_simul_connections = config.max_simul_connections;
   port = config.port;

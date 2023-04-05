@@ -3,9 +3,12 @@
 import express, { Request, Response } from 'express';
 import axios from 'axios';
 
+import * as fs from 'fs';
 import * as http from 'http';
 import * as path from 'path';
 import { Server, Socket } from 'socket.io';
+
+import { AppConfig } from './interfaces/interfaces';
 
 const app = express();
 const port = 80;
@@ -16,6 +19,32 @@ app.use(express.json());
 const site_path = path.join(__dirname, '../www');
 const server = http.createServer(app);
 const io = new Server(server);
+
+const config_path = path.join(__dirname, '../config/app_config.json');
+
+let queue_servers = ['http://localhost:1234'];
+
+try {
+
+    const raw_config = fs.readFileSync(config_path);
+    const config: AppConfig = JSON.parse(raw_config.toString());
+    queue_servers = config.queue_servers;
+  } catch(err) {
+  
+    console.error(`Error reading config file: ${err}`);
+}
+
+function next_queue_server(): string {
+    const next = queue_servers.shift();
+
+    if(!next){
+        console.log('ERROR: No queue servers defined!')
+        return '';
+    }
+
+    queue_servers.push(next);
+    return next;
+}
 
 /***************************
  *          API            *
@@ -49,7 +78,8 @@ io.on('connection', (socket: Socket) => {
 // GET endpoints
 app.get('/', async (req: Request, res: Response) => {
     if(!req.query.token) {
-        res.redirect('http://localhost:1234');
+        const next_redirect = next_queue_server();
+        next_redirect ? res.redirect(next_redirect) : res.sendStatus(500);
         return;
     }
 
@@ -71,7 +101,8 @@ app.get('/', async (req: Request, res: Response) => {
     }
 
     if(!token_is_valid) {
-        res.redirect('http://localhost:1234');
+        const next_redirect = next_queue_server();
+        next_redirect ? res.redirect(next_redirect) : res.sendStatus(500);
         return;
     }
 

@@ -1,10 +1,14 @@
 import { Socket } from "socket.io";
 
-export interface Config {
+export interface QueueConfig {
     max_simul_connections: number;
     port: number;
     debug: boolean;
     debug_token: string;
+};
+
+export interface AppConfig {
+    queue_servers: Array<string>;
 };
 
 export interface ClientObject {
