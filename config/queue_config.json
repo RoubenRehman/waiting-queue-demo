@@ -1,6 +1,7 @@
 {
     "max_simul_connections": 3,
-    "port": 4040,
+    "port": 1234,
     "debug": true,
-    "debug_token": "test"
+    "debug_token": "test",
+    "waiting_page": "waitingroom_2.html"
 }

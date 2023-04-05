@@ -30,6 +30,7 @@ const site_path = path.join(__dirname, '../www');
 const config_path = path.join(__dirname, '../config/queue_config.json');
 
 let max_simul_connections = 1;
+let waiting_page = 'waitingroom_1.html';
 
 // Read config
 try {
@@ -40,6 +41,7 @@ try {
   port = config.port;
   DEBUG = config.debug;
   DEBUG_TOKEN = config.debug_token;
+  waiting_page = config.waiting_page;
 } catch(err) {
 
   console.error(`Error reading config file: ${err}`);
@@ -93,7 +95,7 @@ app.get('/waitingroom', async (req: Request, res: Response) => {
   const status = await redisClient.get(token);
   
   if(status === 'waiting') {
-    res.sendFile(path.join(site_path, '/waitingroom.html'));
+    res.sendFile(path.join(site_path, `/${waiting_page}`));
     return;
 
   } else if(status === 'valid') {

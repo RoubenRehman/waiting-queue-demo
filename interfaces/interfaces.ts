@@ -5,6 +5,7 @@ export interface QueueConfig {
     port: number;
     debug: boolean;
     debug_token: string;
+    waiting_page: string;
 };
 
 export interface AppConfig {
