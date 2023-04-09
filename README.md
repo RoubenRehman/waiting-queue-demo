@@ -170,3 +170,21 @@ This implementation uses Redis as a distributed cache to keep track of the waiti
 * **ClientObject**: Interface grouping a user connected to the application server with their corresponding Socket.IO socket.
 * **PostBody**: Interface used in the API design.
 * **ResponseBody**: Interface used in the API design.
+
+## Config files
+
+### queue_config:
+* **max_simul_connections**: *number*
+	How many simultaneous users are allowed on the application server.
+* **port**: *number*
+	On which port the queue server is deployed
+* **debug**: *true | false*
+	Defining if the queue server should start in debug mode or not. In debug mode, a special token is always valid.
+* **debug_token**: *string*
+	The string, that is treated as an always valid token if debug mode is turned on.
+* **waiting_page**: *string*
+	Path to the html page that's to be served as a waiting page from the `www` directory.
+
+### app_config:
+* **queue_servers**: *Array<string\>*
+	An array holding the urls to the queue server instances that should be used by the application server.
