@@ -26,8 +26,18 @@ app.use(express.json());
 
 const server = http.createServer(app);
 
+const configFile = process.argv[2];
+let confName = '';
+
+if(configFile) {
+  confName = configFile;
+} else {
+  confName = 'queue_config.json';
+  console.warn("No config specified, using default config..");
+}
+
 const site_path = path.join(__dirname, '../www');
-const config_path = path.join(__dirname, '../config/queue_config.json');
+const config_path = path.join(__dirname, `../config/${confName}`);
 
 let max_simul_connections = 1;
 let waiting_page = 'waitingroom_1.html';

@@ -15,13 +15,20 @@ You will need to have node and npm installed on your system:
 
   
 
-Furthermore, this POC is configured to run with a local installation of Redis. Download and install [Redis](https://redis.io/docs/getting-started/) and make sure, a local instance is running on the default port 6379.
+Furthermore, this POC is configured to run with a local installation of Redis. Download and install [Redis](https://redis.io/docs/getting-started/) and make sure, a local instance is running on the default port 6379. Alternatively, run via Docker:
+
+```bash
+docker pull redis
+docker run -d -p 6379:6379 --name waiting-queue-redis redis
+```
 
   
 
 ### Running on Windows
 
-After starting Redis on port 6379, simply execute the `run.bat` file. It will automatically install all necessary packages, compile the TypeScript files, and start up both servers.
+To run on Windows, make sure you have Docker installed first. Then simply run `run.bat`. It will automatically download the latest redis image from DockerHub, spin up a container with Redis available on port 6379, install all necessary packages, compile the TypeScript files, and start up two queue and one application server.
+
+> If you use the `run.bat`script, make sure to stop or delete your redis container via DockerDesktop afterwards.
 
   
 
@@ -57,7 +64,7 @@ To install, compile and run manually, follow:
 
 # How this works
 
-This POC simulates an application server (Ticketmaster's service), that is to be protected from large amounts of simulatneous connections by a seperate queue infrastructure.
+This POC simulates an application server, that is to be protected from large amounts of simulatneous connections by a seperate queue infrastructure.
 
   
 
@@ -65,7 +72,7 @@ After startup of both included servers, one can:
 
   
 
-1. Connect to the application server, akin to connecting to Ticketmaster to buy a ticket. For this, one can naviagte to [http://localhost/](http://localhost/)
+1. Connect to the application server, akin to connecting to a service like Ticketmaster or Eventim to buy a ticket. For this, one can naviagte to [http://localhost/](http://localhost/)
 
   
 
@@ -81,7 +88,7 @@ After startup of both included servers, one can:
 
   
 
-5. From now on, every time the user currently connected to the "ticket shop" disconnects (akin to checks out), the next user in the queue is redirected.
+5. From now on, every time the user currently connected to the "ticket shop" disconnects (aka completes their ticket order), the next user in the queue is redirected.
 
   
 
